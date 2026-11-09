@@ -1,12 +1,13 @@
 import {useEffect,useState,type ChangeEvent,type FormEvent} from 'react';
-import {useNavigate,useParams} from 'react-router-dom';
+import {useNavigate,useParams,useSearchParams} from 'react-router-dom';
 import {ArrowLeft,ArrowRight,Camera,Info,LockKeyhole,MapPin} from 'lucide-react';
 import {request,type Picklist,type Report,type ReportInput} from '../api';
 import {Banner,PageHeading} from '../components/Layout';
 const today=()=>{const d=new Date();return new Date(d.getTime()-d.getTimezoneOffset()*60_000).toISOString().slice(0,10);};
 const blank:ReportInput={reportType:'LOST',title:'',publicDescription:'',categoryId:0,locationId:0,eventDate:today(),secretAttributes:'',storageLocation:'',finderContact:''};
-export function ReportFormPage(){const navigate=useNavigate();const {id}=useParams();const editing=Boolean(id);
- const [form,setForm]=useState<ReportInput>(blank);const [categories,setCategories]=useState<Picklist[]>([]);const [locations,setLocations]=useState<Picklist[]>([]);
+export function ReportFormPage(){const navigate=useNavigate();const {id}=useParams();const [search]=useSearchParams();const editing=Boolean(id);
+ const initialType=search.get('type')==='FOUND'?'FOUND':'LOST';
+ const [form,setForm]=useState<ReportInput>({...blank,reportType:initialType});const [categories,setCategories]=useState<Picklist[]>([]);const [locations,setLocations]=useState<Picklist[]>([]);
  const [files,setFiles]=useState<File[]>([]);const [busy,setBusy]=useState(false);const [loading,setLoading]=useState(true);const [error,setError]=useState('');
  useEffect(()=>{Promise.all([request<{categories:Picklist[];locations:Picklist[]}>('/reports/metadata'), id?request<{report:Report}>(`/reports/${id}`):Promise.resolve(null)])
  .then(([meta,old])=>{setCategories(meta.categories);setLocations(meta.locations);if(old){const r=old.report;setForm({reportType:r.reportType,title:r.title,publicDescription:r.publicDescription,categoryId:r.categoryId,locationId:r.locationId,eventDate:r.eventDate.slice(0,10),secretAttributes:r.privateDetails?.secretAttributes||'',storageLocation:r.privateDetails?.storageLocation||'',finderContact:r.privateDetails?.finderContact||''});if(r.status!=='REJECTED')setError('Only rejected reports can be edited.');}})
