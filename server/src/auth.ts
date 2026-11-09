@@ -2,7 +2,7 @@ import type { NextFunction, Request, Response } from 'express';
 import jwt from 'jsonwebtoken';
 import type { Repository, Role } from './domain.js';
 import { ApiError } from './errors.js';
-import { env } from './env.js';
+import { env, jwtSecret } from './env.js';
 
 export const sessionCookie = 'clfr_session';
 type SessionClaims = { sub: string; role: Role };
@@ -15,7 +15,7 @@ declare global {
 }
 
 export function setSession(res: Response, userId: string, role: Role) {
-  const token = jwt.sign({ sub: userId, role } satisfies SessionClaims, env.JWT_SECRET, { expiresIn: '7d' });
+  const token = jwt.sign({ sub: userId, role } satisfies SessionClaims, jwtSecret, { expiresIn: '7d' });
   res.cookie(sessionCookie, token, {
     httpOnly: true,
     sameSite: 'lax',
@@ -35,7 +35,7 @@ export function requireAuth(repository: Repository) {
       if (typeof token !== 'string') throw new ApiError(401, 'Please sign in.');
       let claims: SessionClaims;
       try {
-        claims = jwt.verify(token, env.JWT_SECRET) as SessionClaims;
+        claims = jwt.verify(token, jwtSecret) as SessionClaims;
       } catch {
         throw new ApiError(401, 'Your session has expired. Please sign in again.');
       }

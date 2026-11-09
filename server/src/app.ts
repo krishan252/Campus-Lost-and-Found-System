@@ -37,6 +37,10 @@ export function createApp(repository: Repository) {
     if (error instanceof ZodError) return res.status(400).json({ success: false, message: 'Please check your form data.', details: error.issues });
     if (typeof error === 'object' && error !== null && 'code' in error && error.code === 'LIMIT_FILE_SIZE') return res.status(400).json({ success: false, message: 'Image exceeds 5 MB.' });
     if (typeof error === 'object' && error !== null && 'code' in error && error.code === 'LIMIT_UNEXPECTED_FILE') return res.status(400).json({ success: false, message: 'Upload one image at a time.' });
+    if (typeof error === 'object' && error !== null && 'code' in error && error.code === 'P2002') return res.status(409).json({ success: false, message: 'A record with these details already exists.' });
+    if (typeof error === 'object' && error !== null && 'status' in error && error.status === 400 && 'type' in error && error.type === 'entity.parse.failed') {
+      return res.status(400).json({ success: false, message: 'Request body must contain valid JSON.' });
+    }
     console.error('Unhandled API error:', error);
     return res.status(500).json({ success: false, message: 'Something went wrong. Please try again.' });
   });

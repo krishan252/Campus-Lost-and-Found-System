@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import request from 'supertest';
+import bcrypt from 'bcryptjs';
 import { createApp } from '../src/app.js';
 import { MemoryRepository } from '../src/memoryRepository.js';
 
@@ -45,7 +46,7 @@ describe('Campus Lost and Found API', () => {
     expect(results.body.data.reports[0].privateDetails).toBeUndefined();
   });
 
-  it('accepts a claim and limits claim verification to administrators', async () => {
+  it('accepts claims from users and lets an administrator verify the winning claim', async () => {
     const reporter = request.agent(app);
     const claimant = request.agent(app);
     const reporterRegister = await reporter.post('/api/v1/auth/register').send({
@@ -74,5 +75,21 @@ describe('Campus Lost and Found API', () => {
     const claims = await claimant.get('/api/v1/claims/mine');
     expect(claims.body.data.claims).toHaveLength(1);
     expect(claims.body.data.claims[0].identifyingDetails).toBe('The ring includes a green key tag.');
+    expect((await claimant.get('/api/v1/admin/claims')).status).toBe(403);
+
+    await repository.createUser({
+      fullName: 'Campus Admin',
+      email: 'admin@example.edu',
+      passwordHash: await bcrypt.hash('admin-password', 4),
+      role: 'ADMIN'
+    });
+    const admin = request.agent(app);
+    const login = await admin.post('/api/v1/auth/login').send({ email: 'admin@example.edu', password: 'admin-password' });
+    expect(login.status).toBe(200);
+    const queue = await admin.get('/api/v1/admin/claims');
+    expect(queue.body.data.claims).toHaveLength(1);
+    const decision = await admin.post(`/api/v1/admin/claims/${claim.body.data.claim.id}/decision`).send({ status: 'APPROVED' });
+    expect(decision.status).toBe(200);
+    expect((await repository.findReport(created.body.data.report.id))?.status).toBe('CLOSED');
   });
 });
