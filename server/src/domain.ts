@@ -75,6 +75,7 @@ export type NewReport = Omit<ReportRecord, 'id' | 'images' | 'createdAt' | 'upda
 export type NewClaim = Pick<ClaimRecord, 'reportId' | 'claimantId' | 'identifyingDetails'>;
 
 export interface Repository {
+  health(): Promise<void>;
   findUserByEmail(email: string): Promise<UserRecord | null>;
   findUserById(id: string): Promise<UserRecord | null>;
   createUser(input: Pick<UserRecord, 'fullName' | 'email' | 'passwordHash'> & { role?: Role }): Promise<UserRecord>;

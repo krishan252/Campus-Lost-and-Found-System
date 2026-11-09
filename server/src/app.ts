@@ -26,7 +26,14 @@ export function createApp(repository: Repository) {
     }
     next();
   });
-  app.get('/api/v1/health', (_req, res) => res.json({ success: true, data: { service: 'campus-lost-and-found', status: 'ok' } }));
+  app.get('/api/v1/health', async (_req, res, next) => {
+    try {
+      await repository.health();
+      res.json({ success: true, data: { service: 'campus-lost-and-found', status: 'ok' } });
+    } catch (error) {
+      next(error);
+    }
+  });
   app.use('/api/v1/auth', rateLimit({ windowMs: 15 * 60 * 1000, limit: 30, standardHeaders: 'draft-7', legacyHeaders: false }), authRouter(repository));
   app.use('/api/v1/reports', reportsRouter(repository));
   app.use('/api/v1', claimsRouter(repository));

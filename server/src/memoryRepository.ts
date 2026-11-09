@@ -22,6 +22,8 @@ export class MemoryRepository implements Repository {
   private readonly categoryRows: Picklist[] = categories.map((name, index) => ({ id: index + 1, name }));
   private readonly locationRows: Picklist[] = locations.map((name, index) => ({ id: index + 1, name }));
 
+  async health() {}
+
   async reset() {
     this.users.clear();
     this.reports.clear();

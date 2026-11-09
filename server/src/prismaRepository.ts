@@ -50,6 +50,10 @@ function mapClaim(claim: Prisma.ClaimGetPayload<Record<string, never>>): ClaimRe
 export class PrismaRepository implements Repository {
   constructor(private readonly prisma: PrismaClient) {}
 
+  async health() {
+    await this.prisma.$queryRaw`SELECT 1`;
+  }
+
   async findUserByEmail(email: string) {
     const user = await this.prisma.user.findUnique({ where: { email } });
     return user ? mapUser(user) : null;
