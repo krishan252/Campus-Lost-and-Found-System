@@ -1,0 +1,10 @@
+import {useEffect,useState} from 'react';
+import {Link} from 'react-router-dom';
+import {ArrowRight,CalendarDays,ClipboardList,MapPin,Plus,Tag} from 'lucide-react';
+import {request,type Report} from '../api';
+import {Badge,Banner,PageHeading} from '../components/Layout';
+import {useAuth} from '../context/AuthContext';
+export function ReportsPage(){const {user}=useAuth();const [reports,setReports]=useState<Report[]>([]);const [busy,setBusy]=useState(true);const [error,setError]=useState('');
+ useEffect(()=>{request<{reports:Report[]}>('/reports/mine').then(d=>setReports(d.reports)).catch(e=>setError((e as Error).message)).finally(()=>setBusy(false));},[]);
+ return <section className="shell content-page"><div className="heading-row"><PageHeading eyebrow="MY SPACE" title="Your reports" subtitle={`Welcome back, ${user?.fullName.split(' ')[0]||'there'}. Keep track of the items you have reported.`}/><Link to="/reports/new" className="button"><Plus size={18}/> New report</Link></div>{error&&<Banner tone="error">{error}</Banner>}{busy?<p>Loading your reports...</p>:reports.length===0?<div className="empty-state"><ClipboardList size={42}/><h2>Nothing to report yet?</h2><p>When you submit your first lost or found report, it will appear right here.</p><Link to="/reports/new" className="button">Create your first report <ArrowRight size={18}/></Link></div>:<div className="report-grid">{reports.map(r=><Link className="report-card" to={`/reports/${r.id}`} key={r.id}><div className="report-top"><span className={`type-pill type-${r.reportType.toLowerCase()}`}>{r.reportType==='FOUND'?'FOUND ITEM':'LOST ITEM'}</span><Badge status={r.status}/></div><div className="report-mini-icon">{r.reportType==='FOUND'?'✦':'✳'}</div><h3>{r.title}</h3><p className="line-clamp">{r.publicDescription}</p><div className="report-facts"><span><Tag size={14}/>{r.category.name}</span><span><MapPin size={14}/>{r.location.name}</span><span><CalendarDays size={14}/>{new Date(r.eventDate).toLocaleDateString()}</span></div><div className="report-bottom">View report <ArrowRight size={17}/></div></Link>)}</div>}</section>
+}

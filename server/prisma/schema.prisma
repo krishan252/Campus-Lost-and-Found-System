@@ -1,0 +1,137 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Role {
+  USER
+  ADMIN
+}
+
+enum ReportType {
+  LOST
+  FOUND
+}
+
+enum ReportStatus {
+  PENDING_REVIEW
+  APPROVED
+  REJECTED
+  CLOSED
+}
+
+enum ClaimStatus {
+  PENDING_REVIEW
+  APPROVED
+  REJECTED
+}
+
+model User {
+  id               String             @id @default(uuid())
+  fullName         String
+  email            String             @unique
+  passwordHash     String
+  role             Role               @default(USER)
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
+  reports          Report[]           @relation("Reporter")
+  claims           Claim[]            @relation("Claimant")
+  reviewedClaims   Claim[]            @relation("ClaimReviewer")
+  moderationReviews ModerationReview[] @relation("Reviewer")
+
+  @@index([role])
+}
+
+model ItemCategory {
+  id      Int      @id @default(autoincrement())
+  name    String   @unique
+  reports Report[]
+}
+
+model CampusLocation {
+  id      Int      @id @default(autoincrement())
+  name    String   @unique
+  reports Report[]
+}
+
+model Report {
+  id                String                 @id @default(uuid())
+  reporterId        String
+  reportType        ReportType
+  categoryId        Int
+  locationId        Int
+  title             String
+  publicDescription String                 @db.Text
+  eventDate         DateTime               @db.Date
+  status            ReportStatus           @default(PENDING_REVIEW)
+  lastReviewReason  String?                @db.Text
+  createdAt         DateTime               @default(now())
+  updatedAt         DateTime               @updatedAt
+  reporter          User                   @relation("Reporter", fields: [reporterId], references: [id])
+  category          ItemCategory           @relation(fields: [categoryId], references: [id])
+  location          CampusLocation          @relation(fields: [locationId], references: [id])
+  privateDetails    PrivateReportDetails?
+  images            ReportImage[]
+  claims            Claim[]
+  reviews           ModerationReview[]
+
+  @@index([status, createdAt])
+  @@index([reporterId, createdAt])
+  @@index([reportType, categoryId, locationId, status])
+}
+
+model PrivateReportDetails {
+  reportId         String  @id
+  secretAttributes String? @db.Text
+  storageLocation  String? @db.Text
+  finderContact     String? @db.Text
+  report            Report  @relation(fields: [reportId], references: [id], onDelete: Cascade)
+}
+
+model ReportImage {
+  id         String   @id @default(uuid())
+  reportId   String
+  mimeType   String
+  sizeBytes  Int
+  data       Bytes
+  uploadedAt DateTime @default(now())
+  report     Report   @relation(fields: [reportId], references: [id], onDelete: Cascade)
+
+  @@index([reportId, uploadedAt])
+}
+
+model Claim {
+  id                 String      @id @default(uuid())
+  reportId           String
+  claimantId         String
+  identifyingDetails String      @db.Text
+  status             ClaimStatus @default(PENDING_REVIEW)
+  reviewReason       String?     @db.Text
+  reviewerId         String?
+  createdAt          DateTime    @default(now())
+  reviewedAt         DateTime?
+  report             Report      @relation(fields: [reportId], references: [id], onDelete: Cascade)
+  claimant           User        @relation("Claimant", fields: [claimantId], references: [id])
+  reviewer           User?       @relation("ClaimReviewer", fields: [reviewerId], references: [id])
+
+  @@unique([reportId, claimantId])
+  @@index([status, createdAt])
+  @@index([claimantId, createdAt])
+}
+
+model ModerationReview {
+  id         String   @id @default(uuid())
+  reportId   String
+  reviewerId String
+  decision   String
+  reason     String?  @db.Text
+  reviewedAt DateTime @default(now())
+  report     Report   @relation(fields: [reportId], references: [id], onDelete: Cascade)
+  reviewer   User     @relation("Reviewer", fields: [reviewerId], references: [id])
+
+  @@index([reportId, reviewedAt])
+}
