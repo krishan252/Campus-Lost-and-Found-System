@@ -1,4 +1,5 @@
-import { Prisma, PrismaClient } from '@prisma/client';
+import { PrismaClient } from './generated/prisma/client.js';
+import type { Prisma } from './generated/prisma/client.js';
 import type {
   ClaimFilters,
   ClaimRecord,

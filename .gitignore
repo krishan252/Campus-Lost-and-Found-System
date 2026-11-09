@@ -8,3 +8,4 @@ coverage/
 .env.*
 !.env.example
 server/uploads/
+server/src/generated/

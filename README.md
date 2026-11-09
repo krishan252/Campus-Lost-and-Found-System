@@ -16,7 +16,7 @@ Claim verification is a staff review of the claimant's private identifying detai
 
 ## Requirements
 
-- Node.js 20 or newer and npm.
+- Node.js 22.12 or newer and npm (Prisma 7 runtime requirement).
 - PostgreSQL 14 or newer for local development, or Docker Desktop with the WSL 2 Linux engine enabled.
 - Git (to clone the repository).
 

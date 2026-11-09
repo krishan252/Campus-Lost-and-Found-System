@@ -1,10 +1,12 @@
 import { createApp } from './app.js';
 import { env } from './env.js';
-import { PrismaClient } from '@prisma/client';
+import { PrismaPg } from '@prisma/adapter-pg';
+import { PrismaClient } from './generated/prisma/client.js';
 import { PrismaRepository } from './prismaRepository.js';
 
-if (!env.DATABASE_URL) throw new Error('DATABASE_URL must be configured before starting the API.');
-const prisma = new PrismaClient();
+const databaseUrl = env.DATABASE_URL;
+if (!databaseUrl) throw new Error('DATABASE_URL must be configured before starting the API.');
+const prisma = new PrismaClient({ adapter: new PrismaPg({ connectionString: databaseUrl }) });
 const server = createApp(new PrismaRepository(prisma)).listen(env.PORT, () => {
   console.log(`Campus Lost and Found API listening on http://localhost:${env.PORT}`);
 });

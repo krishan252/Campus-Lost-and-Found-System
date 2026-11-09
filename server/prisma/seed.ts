@@ -1,8 +1,11 @@
-import { PrismaClient, Role } from '@prisma/client';
+import { PrismaPg } from '@prisma/adapter-pg';
+import { PrismaClient, Role } from '../src/generated/prisma/client.js';
 import bcrypt from 'bcryptjs';
 import { env } from '../src/env.js';
 
-const prisma = new PrismaClient();
+const databaseUrl = env.DATABASE_URL;
+if (!databaseUrl) throw new Error('DATABASE_URL must be configured before seeding the database.');
+const prisma = new PrismaClient({ adapter: new PrismaPg({ connectionString: databaseUrl }) });
 const categories = ['Electronics & Laptops', 'Wallets, IDs & Cards', 'Keys', 'Books & Stationery', 'Clothing & Accessories', 'Other'];
 const locations = ['Central Library', 'Engineering Complex', 'Student Activity Centre', 'Science Laboratories', 'Sports Ground', 'Other'];
 
