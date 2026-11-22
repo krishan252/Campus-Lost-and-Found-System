@@ -1,15 +1,12 @@
 {
-  "name": "campus-lost-and-found-system",
+  "name": "campus-lost-found-sprint-1",
   "private": true,
   "version": "1.0.0",
   "scripts": {
+    "install:all": "npm --prefix server install && npm --prefix client install",
     "dev:server": "npm --prefix server run dev",
     "dev:client": "npm --prefix client run dev",
     "build": "npm --prefix server run build && npm --prefix client run build",
-    "test": "npm --prefix server test",
-    "db:generate": "npm --prefix server run db:generate",
-    "db:migrate": "npm --prefix server run db:migrate",
-    "db:deploy": "npm --prefix server run db:deploy",
-    "db:seed": "npm --prefix server run db:seed"
+    "test": "npm --prefix server test"
   }
 }

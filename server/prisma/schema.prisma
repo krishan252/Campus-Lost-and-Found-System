@@ -1,10 +1,10 @@
 generator client {
-  provider = "prisma-client"
-  output   = "../src/generated/prisma"
+  provider = "prisma-client-js"
 }
 
 datasource db {
   provider = "postgresql"
+  url = env("DATABASE_URL")
 }
 
 enum Role {
@@ -24,114 +24,107 @@ enum ReportStatus {
   CLOSED
 }
 
-enum ClaimStatus {
-  PENDING_REVIEW
-  APPROVED
-  REJECTED
-}
-
 model User {
-  id               String             @id @default(uuid())
-  fullName         String
-  email            String             @unique
-  passwordHash     String
-  role             Role               @default(USER)
-  createdAt        DateTime           @default(now())
-  updatedAt        DateTime           @updatedAt
-  reports          Report[]           @relation("Reporter")
-  claims           Claim[]            @relation("Claimant")
-  reviewedClaims   Claim[]            @relation("ClaimReviewer")
-  moderationReviews ModerationReview[] @relation("Reviewer")
-
+  id                     String @id @default(uuid())
+  fullName               String
+  email                  String @unique
+  passwordHash           String
+  role                   Role @default(USER)
+  emailVerifiedAt        DateTime?
+  sessionVersion         Int @default(0)
+  createdAt              DateTime @default(now())
+  updatedAt              DateTime @updatedAt
+  reports                Report[] @relation("Reporter")
+  moderationReviews      ModerationReview[] @relation("Reviewer")
+  verificationTokens     EmailVerificationToken[]
+  auditEvents            AuditEvent[]
   @@index([role])
 }
 
+model EmailVerificationToken {
+  id            String @id @default(uuid())
+  userId        String
+  tokenHash     String @unique
+  expiresAt     DateTime
+  createdAt     DateTime @default(now())
+  user          User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@index([userId])
+}
+
 model ItemCategory {
-  id      Int      @id @default(autoincrement())
-  name    String   @unique
+  id      Int @id @default(autoincrement())
+  name    String @unique
   reports Report[]
 }
 
 model CampusLocation {
-  id      Int      @id @default(autoincrement())
-  name    String   @unique
+  id      Int @id @default(autoincrement())
+  name    String @unique
   reports Report[]
 }
 
 model Report {
-  id                String                 @id @default(uuid())
-  reporterId        String
-  reportType        ReportType
-  categoryId        Int
-  locationId        Int
-  title             String
-  publicDescription String                 @db.Text
-  eventDate         DateTime               @db.Date
-  status            ReportStatus           @default(PENDING_REVIEW)
-  lastReviewReason  String?                @db.Text
-  createdAt         DateTime               @default(now())
-  updatedAt         DateTime               @updatedAt
-  reporter          User                   @relation("Reporter", fields: [reporterId], references: [id])
-  category          ItemCategory           @relation(fields: [categoryId], references: [id])
-  location          CampusLocation          @relation(fields: [locationId], references: [id])
-  privateDetails    PrivateReportDetails?
-  images            ReportImage[]
-  claims            Claim[]
-  reviews           ModerationReview[]
-
+  id             String @id @default(uuid())
+  reporterId     String
+  reportType     ReportType
+  categoryId     Int
+  locationId     Int
+  title          String
+  publicDescription String @db.Text
+  eventDate      DateTime @db.Date
+  status         ReportStatus @default(PENDING_REVIEW)
+  lastReviewReason String? @db.Text
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  reporter       User @relation("Reporter", fields: [reporterId], references: [id])
+  category       ItemCategory @relation(fields: [categoryId], references: [id])
+  location       CampusLocation @relation(fields: [locationId], references: [id])
+  privateDetails PrivateReportDetails?
+  images         ReportImage[]
+  reviews        ModerationReview[]
   @@index([status, createdAt])
   @@index([reporterId, createdAt])
-  @@index([reportType, categoryId, locationId, status])
 }
 
 model PrivateReportDetails {
-  reportId         String  @id
-  secretAttributes String? @db.Text
-  storageLocation  String? @db.Text
+  reportId          String @id
+  secretAttributes  String? @db.Text
+  storageLocation   String? @db.Text
   finderContact     String? @db.Text
-  report            Report  @relation(fields: [reportId], references: [id], onDelete: Cascade)
+  report            Report @relation(fields: [reportId], references: [id], onDelete: Cascade)
 }
 
 model ReportImage {
-  id         String   @id @default(uuid())
-  reportId   String
-  mimeType   String
-  sizeBytes  Int
-  data       Bytes
-  uploadedAt DateTime @default(now())
-  report     Report   @relation(fields: [reportId], references: [id], onDelete: Cascade)
-
-  @@index([reportId, uploadedAt])
-}
-
-model Claim {
-  id                 String      @id @default(uuid())
-  reportId           String
-  claimantId         String
-  identifyingDetails String      @db.Text
-  status             ClaimStatus @default(PENDING_REVIEW)
-  reviewReason       String?     @db.Text
-  reviewerId         String?
-  createdAt          DateTime    @default(now())
-  reviewedAt         DateTime?
-  report             Report      @relation(fields: [reportId], references: [id], onDelete: Cascade)
-  claimant           User        @relation("Claimant", fields: [claimantId], references: [id])
-  reviewer           User?       @relation("ClaimReviewer", fields: [reviewerId], references: [id])
-
-  @@unique([reportId, claimantId])
-  @@index([status, createdAt])
-  @@index([claimantId, createdAt])
+  id          String @id @default(uuid())
+  reportId    String
+  storedName  String @unique
+  mimeType    String
+  sizeBytes   Int
+  uploadedAt  DateTime @default(now())
+  report      Report @relation(fields: [reportId], references: [id], onDelete: Cascade)
+  @@index([reportId])
 }
 
 model ModerationReview {
-  id         String   @id @default(uuid())
-  reportId   String
-  reviewerId String
-  decision   String
-  reason     String?  @db.Text
-  reviewedAt DateTime @default(now())
-  report     Report   @relation(fields: [reportId], references: [id], onDelete: Cascade)
-  reviewer   User     @relation("Reviewer", fields: [reviewerId], references: [id])
-
+  id            String @id @default(uuid())
+  reportId      String
+  reviewerId    String
+  decision      String
+  reason        String? @db.Text
+  reviewedAt    DateTime @default(now())
+  report        Report @relation(fields: [reportId], references: [id])
+  reviewer      User @relation("Reviewer", fields: [reviewerId], references: [id])
   @@index([reportId, reviewedAt])
+}
+
+model AuditEvent {
+  id            String @id @default(uuid())
+  actorId       String
+  action        String
+  entityType    String
+  entityId      String
+  occurredAt    DateTime @default(now())
+  metadata      Json?
+  actor         User @relation(fields: [actorId], references: [id])
+  @@index([entityType, entityId])
 }
