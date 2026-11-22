@@ -7,9 +7,6 @@ CREATE TYPE "ReportType" AS ENUM ('LOST', 'FOUND');
 -- CreateEnum
 CREATE TYPE "ReportStatus" AS ENUM ('PENDING_REVIEW', 'APPROVED', 'REJECTED', 'CLOSED');
 
--- CreateEnum
-CREATE TYPE "ClaimStatus" AS ENUM ('PENDING_REVIEW', 'APPROVED', 'REJECTED');
-
 -- CreateTable
 CREATE TABLE "User" (
     "id" TEXT NOT NULL,
@@ -17,10 +14,23 @@ CREATE TABLE "User" (
     "email" TEXT NOT NULL,
     "passwordHash" TEXT NOT NULL,
     "role" "Role" NOT NULL DEFAULT 'USER',
+    "emailVerifiedAt" TIMESTAMP(3),
+    "sessionVersion" INTEGER NOT NULL DEFAULT 0,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
     CONSTRAINT "User_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "EmailVerificationToken" (
+    "id" TEXT NOT NULL,
+    "userId" TEXT NOT NULL,
+    "tokenHash" TEXT NOT NULL,
+    "expiresAt" TIMESTAMP(3) NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "EmailVerificationToken_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -71,27 +81,12 @@ CREATE TABLE "PrivateReportDetails" (
 CREATE TABLE "ReportImage" (
     "id" TEXT NOT NULL,
     "reportId" TEXT NOT NULL,
+    "storedName" TEXT NOT NULL,
     "mimeType" TEXT NOT NULL,
     "sizeBytes" INTEGER NOT NULL,
-    "data" BYTEA NOT NULL,
     "uploadedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT "ReportImage_pkey" PRIMARY KEY ("id")
-);
-
--- CreateTable
-CREATE TABLE "Claim" (
-    "id" TEXT NOT NULL,
-    "reportId" TEXT NOT NULL,
-    "claimantId" TEXT NOT NULL,
-    "identifyingDetails" TEXT NOT NULL,
-    "status" "ClaimStatus" NOT NULL DEFAULT 'PENDING_REVIEW',
-    "reviewReason" TEXT,
-    "reviewerId" TEXT,
-    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "reviewedAt" TIMESTAMP(3),
-
-    CONSTRAINT "Claim_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -106,11 +101,30 @@ CREATE TABLE "ModerationReview" (
     CONSTRAINT "ModerationReview_pkey" PRIMARY KEY ("id")
 );
 
+-- CreateTable
+CREATE TABLE "AuditEvent" (
+    "id" TEXT NOT NULL,
+    "actorId" TEXT NOT NULL,
+    "action" TEXT NOT NULL,
+    "entityType" TEXT NOT NULL,
+    "entityId" TEXT NOT NULL,
+    "occurredAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "metadata" JSONB,
+
+    CONSTRAINT "AuditEvent_pkey" PRIMARY KEY ("id")
+);
+
 -- CreateIndex
 CREATE UNIQUE INDEX "User_email_key" ON "User"("email");
 
 -- CreateIndex
 CREATE INDEX "User_role_idx" ON "User"("role");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "EmailVerificationToken_tokenHash_key" ON "EmailVerificationToken"("tokenHash");
+
+-- CreateIndex
+CREATE INDEX "EmailVerificationToken_userId_idx" ON "EmailVerificationToken"("userId");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "ItemCategory_name_key" ON "ItemCategory"("name");
@@ -125,22 +139,19 @@ CREATE INDEX "Report_status_createdAt_idx" ON "Report"("status", "createdAt");
 CREATE INDEX "Report_reporterId_createdAt_idx" ON "Report"("reporterId", "createdAt");
 
 -- CreateIndex
-CREATE INDEX "Report_reportType_categoryId_locationId_status_idx" ON "Report"("reportType", "categoryId", "locationId", "status");
+CREATE UNIQUE INDEX "ReportImage_storedName_key" ON "ReportImage"("storedName");
 
 -- CreateIndex
-CREATE INDEX "ReportImage_reportId_uploadedAt_idx" ON "ReportImage"("reportId", "uploadedAt");
-
--- CreateIndex
-CREATE INDEX "Claim_status_createdAt_idx" ON "Claim"("status", "createdAt");
-
--- CreateIndex
-CREATE INDEX "Claim_claimantId_createdAt_idx" ON "Claim"("claimantId", "createdAt");
-
--- CreateIndex
-CREATE UNIQUE INDEX "Claim_reportId_claimantId_key" ON "Claim"("reportId", "claimantId");
+CREATE INDEX "ReportImage_reportId_idx" ON "ReportImage"("reportId");
 
 -- CreateIndex
 CREATE INDEX "ModerationReview_reportId_reviewedAt_idx" ON "ModerationReview"("reportId", "reviewedAt");
+
+-- CreateIndex
+CREATE INDEX "AuditEvent_entityType_entityId_idx" ON "AuditEvent"("entityType", "entityId");
+
+-- AddForeignKey
+ALTER TABLE "EmailVerificationToken" ADD CONSTRAINT "EmailVerificationToken_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "Report" ADD CONSTRAINT "Report_reporterId_fkey" FOREIGN KEY ("reporterId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
@@ -158,16 +169,10 @@ ALTER TABLE "PrivateReportDetails" ADD CONSTRAINT "PrivateReportDetails_reportId
 ALTER TABLE "ReportImage" ADD CONSTRAINT "ReportImage_reportId_fkey" FOREIGN KEY ("reportId") REFERENCES "Report"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "Claim" ADD CONSTRAINT "Claim_reportId_fkey" FOREIGN KEY ("reportId") REFERENCES "Report"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "Claim" ADD CONSTRAINT "Claim_claimantId_fkey" FOREIGN KEY ("claimantId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "Claim" ADD CONSTRAINT "Claim_reviewerId_fkey" FOREIGN KEY ("reviewerId") REFERENCES "User"("id") ON DELETE SET NULL ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "ModerationReview" ADD CONSTRAINT "ModerationReview_reportId_fkey" FOREIGN KEY ("reportId") REFERENCES "Report"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "ModerationReview" ADD CONSTRAINT "ModerationReview_reportId_fkey" FOREIGN KEY ("reportId") REFERENCES "Report"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "ModerationReview" ADD CONSTRAINT "ModerationReview_reviewerId_fkey" FOREIGN KEY ("reviewerId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "AuditEvent" ADD CONSTRAINT "AuditEvent_actorId_fkey" FOREIGN KEY ("actorId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;

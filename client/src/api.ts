@@ -9,15 +9,6 @@ export type Report = {
   images:ImageRecord[];
   privateDetails?:{secretAttributes:string|null;storageLocation:string|null;finderContact:string|null}|null;
 };
-export type Claim = {
-  id:string;reportId:string;claimantId:string;identifyingDetails:string;
-  status:'PENDING_REVIEW'|'APPROVED'|'REJECTED';reviewReason:string|null;
-  createdAt:string;reviewedAt:string|null;
-  report?:(Pick<Report,'id'|'title'|'reportType'|'status'|'privateDetails'|'images'> & {
-    category?:Picklist;location?:Picklist;
-  })|null;
-  claimant?:{id:string;fullName:string;email:string}|null;
-};
 export type ReportInput = {reportType:'LOST'|'FOUND';title:string;publicDescription:string;categoryId:number;locationId:number;eventDate:string;secretAttributes:string;storageLocation:string;finderContact:string};
 type ApiResponse<T> = {success:boolean;message?:string;data:T;details?:{issues?:Array<{path:(string|number)[];message:string}>}};
 const base = '/api/v1';

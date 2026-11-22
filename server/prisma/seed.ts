@@ -1,38 +1,20 @@
-import { PrismaPg } from '@prisma/adapter-pg';
-import { PrismaClient, Role } from '../src/generated/prisma/client.js';
+import 'dotenv/config';
+import { PrismaClient, Role } from '@prisma/client';
 import bcrypt from 'bcryptjs';
-import { env } from '../src/env.js';
-
-const databaseUrl = env.DATABASE_URL;
-if (!databaseUrl) throw new Error('DATABASE_URL must be configured before seeding the database.');
-const prisma = new PrismaClient({ adapter: new PrismaPg({ connectionString: databaseUrl }) });
-const categories = ['Electronics & Laptops', 'Wallets, IDs & Cards', 'Keys', 'Books & Stationery', 'Clothing & Accessories', 'Other'];
-const locations = ['Central Library', 'Engineering Complex', 'Student Activity Centre', 'Science Laboratories', 'Sports Ground', 'Other'];
-
-async function seed() {
-  await Promise.all([
-    ...categories.map(name => prisma.itemCategory.upsert({ where: { name }, update: {}, create: { name } })),
-    ...locations.map(name => prisma.campusLocation.upsert({ where: { name }, update: {}, create: { name } }))
-  ]);
-  if (env.ADMIN_EMAIL && env.ADMIN_PASSWORD) {
-    const passwordHash = await bcrypt.hash(env.ADMIN_PASSWORD, 12);
-    await prisma.user.upsert({
-      where: { email: env.ADMIN_EMAIL.toLowerCase() },
-      update: { role: Role.ADMIN, passwordHash },
-      create: {
-        fullName: 'Campus Administrator',
-        email: env.ADMIN_EMAIL.toLowerCase(),
-        passwordHash,
-        role: Role.ADMIN
-      }
-    });
-  }
-  console.log('Seeded campus categories and locations.');
+const prisma = new PrismaClient();
+const categories = ['Electronics', 'ID cards', 'Keys', 'Bags', 'Books & notes', 'Clothing', 'Other'];
+const locations = ['Lecture halls', 'Engineering library', 'Canteen', 'Laboratories', 'Computer center', 'Main entrance', 'Sports ground', 'Faculty common area', 'Other'];
+async function main() {
+  for (const name of categories) await prisma.itemCategory.upsert({where: {name}, update: {}, create: {name}});
+  for (const name of locations) await prisma.campusLocation.upsert({where: {name}, update: {}, create: {name}});
+  const email = process.env.DEMO_ADMIN_EMAIL?.trim().toLowerCase();
+  const password = process.env.DEMO_ADMIN_PASSWORD;
+  if (email && password) {
+    if (password.length < 12) throw new Error('DEMO_ADMIN_PASSWORD must have at least 12 characters');
+    const passwordHash = await bcrypt.hash(password, 12);
+    await prisma.user.upsert({where: {email}, update: {role: Role.ADMIN, emailVerifiedAt: new Date(), passwordHash}, create: {email, fullName: 'Demo Administrator', passwordHash, role: Role.ADMIN, emailVerifiedAt: new Date()}});
+    console.log(`Demo admin ready: ${email}`);
+  } else console.log('No demo admin created. Set DEMO_ADMIN_EMAIL and DEMO_ADMIN_PASSWORD in server/.env then run seed.');
+  console.log('Category/location seed complete.');
 }
-
-seed()
-  .catch(error => {
-    console.error('Database seed failed:', error);
-    process.exitCode = 1;
-  })
-  .finally(async () => prisma.$disconnect());
+main().catch(e => {console.error(e); process.exitCode = 1;}).finally(() => prisma.$disconnect());

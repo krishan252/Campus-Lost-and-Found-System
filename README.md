@@ -1,158 +1,247 @@
-# Campus Lost and Found System
+# Foundly — Campus Lost & Found Repository (Sprint 1)
 
-A campus lost-and-found application built with React, Express, TypeScript, Prisma, and PostgreSQL.
+A complete **Sprint 1 academic MVP** for the University of Ruhuna Campus Lost & Found Repository with Claim Verification Workflow.
 
-## Features
+- **Frontend:** React 18 + TypeScript + Vite + responsive brown/cream CSS design.
+- **Backend:** Node.js + Express + TypeScript + Zod.
+- **Database:** PostgreSQL + Prisma (one shared database and one reports table for LOST/FOUND).
+- **Security:** verified university email registration, bcrypt password hashes, HttpOnly authentication cookie, backend RBAC, protected photo storage, audit events.
+- **Admin:** pending report queue, full moderation review, approve/reject with rejection reasons.
 
-- Register and log in with an email address and password.
-- Submit LOST and FOUND reports, including up to three JPEG, PNG, or WebP images.
-- Search approved reports by keyword, report type, category, and campus location.
-- Keep report verification details private from public search results.
-- Review and approve or reject reports as an administrator.
-- Submit and track ownership claims for approved found items.
-- Review claims as an administrator; an approved claim closes the found-item report.
+> **Figma note:** The supplied Figma project URL was not accessible as design frames in this session. The UI implements a polished brown/cream theme inspired by the project title, **not** a pixel-perfect Figma reproduction. Colors, spacing and illustrations can be changed in `client/src/styles.css` after comparing with the Figma frames.
 
-Claim verification is a staff review of the claimant's private identifying details; this application does not send email or make an automated ownership decision.
+## 1. What Sprint 1 includes
 
-## Requirements
+| Feature | Included |
+|---|---|
+| Project structure, Git starter docs, environment configuration | ✅ |
+| PostgreSQL/Prisma database schema + seeds | ✅ |
+| University email registration with verification link | ✅ |
+| Login, logout, profile, USER/ADMIN permissions | ✅ |
+| Create LOST/FOUND reports with private identifying fields | ✅ |
+| Upload up to three protected JPEG/PNG/WebP images | ✅ |
+| My Reports and report detail views | ✅ |
+| Admin pending list / approve / reject with explanation | ✅ |
+| Reporter edits/resubmits rejected reports | ✅ |
+| Audit records, validation and unit tests | ✅ |
+| Search/filter repository and claims | **Sprint 2, not included** |
+| Claim verification/contact release | **Sprint 2, not included** |
+| Handover, notifications and deployment hardening | **Sprint 3, not included** |
 
-- Node.js 22.12 or newer and npm (Prisma 7 runtime requirement).
-- PostgreSQL 14 or newer for local development, or Docker Desktop with the WSL 2 Linux engine enabled.
-- Git (to clone the repository).
+## 2. Requirements
 
-## Docker setup
+- Node.js **20 or newer** (Node 22 recommended).
+- npm.
+- PostgreSQL **14+** installed locally, OR Docker Desktop (optional).
+- Visual Studio Code.
+- Git for collaboration.
 
-1. Copy the example environment file and edit the values:
+**Windows (PowerShell)** and macOS/Linux commands work unless otherwise noted.
 
-   ```powershell
-   Copy-Item .env.example .env
-   ```
+## 3. Unzip and install
 
-   macOS/Linux:
-
-   ```sh
-   cp .env.example .env
-   ```
-
-2. Set `JWT_SECRET` to a new random value of at least 32 characters. Keep the PostgreSQL credentials in `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB`, and `DATABASE_URL` consistent. The values in `.env.example` are for local development only.
-
-3. Build and start the application:
-
-   ```sh
-   docker compose up --build
-   ```
-
-   Compose waits for PostgreSQL, applies migrations, seeds categories and locations, then starts the API and frontend.
-
-4. Open:
-
-   - Web application: <http://localhost:5173>
-   - API health check: <http://localhost:4000/api/v1/health>
-
-The database is stored in the `postgres_data` Docker volume and survives container restarts. `docker compose down` stops the services but preserves the volume. **`docker compose down -v` deletes the database data.**
-
-To create an administrator, set both `ADMIN_EMAIL` and `ADMIN_PASSWORD` in `.env` (password must be at least 12 characters) and run:
-
-```sh
-docker compose run --rm seed
-```
-
-The seed operation is safe to repeat and updates the administrator password to the configured value.
-
-## Local development
-
-### 1. Configure PostgreSQL and environment
-
-Copy the example file for Compose and start only the database:
-
-```sh
-docker compose up -d db
-```
-
-Copy the example file for the API:
+Open a terminal in the project folder, where this README and `package.json` are located.
 
 ```powershell
-Copy-Item .env.example server/.env
+npm run install:all
 ```
 
-macOS/Linux:
+This installs packages in `server/` and `client/`. Do not commit `node_modules` to Git.
 
-```sh
-cp .env.example server/.env
+## 4. Configure database
+
+### Option A — Docker (optional)
+
+```powershell
+docker compose up -d
 ```
 
-In `server/.env`, change `DATABASE_URL` to use the host port and hostname:
+Docker exposes PostgreSQL at `localhost:5433`, DB name `campus_lost_found`, username `clfr`, password `clfr_local_password`. These credentials are for **local development only**.
+
+### Option B — PostgreSQL already installed on Windows
+
+Use pgAdmin Query Tool or psql to create a database:
+
+```sql
+CREATE DATABASE campus_lost_found;
+```
+
+Use your own Postgres username/password in the connection string in `server/.env`, e.g.:
 
 ```text
-DATABASE_URL=postgresql://clfr:change-me-in-local-env@localhost:5433/campus_lost_found?schema=public
+DATABASE_URL=postgresql://postgres:YOUR_PASSWORD@localhost:5432/campus_lost_found?schema=public
 ```
 
-Use your own local database credentials if needed. Set `JWT_SECRET` to a random value of at least 32 characters. Do not commit `.env` files.
+If your database password contains characters such as `@`, `#` or `:`, URL-encode them first. No Docker/WSL is required for Option B.
 
-If PostgreSQL is installed locally instead of using Compose, point `DATABASE_URL` to that server and database.
+## 5. Set the backend environment
 
-### 2. Install dependencies
+From the project root:
 
-From the repository root:
-
-```sh
-npm --prefix server ci
-npm --prefix client ci
+```powershell
+Copy-Item server/.env.example server/.env
 ```
 
-### 3. Apply migrations and seed lookup data
+On macOS/Linux: `cp server/.env.example server/.env`
 
-```sh
-npm run db:deploy
+Open `server/.env` and set:
+
+- `DATABASE_URL` to your actual PostgreSQL connection string.
+- `JWT_SECRET` to a **random secret of at least 32 characters** (use a unique value, not the example).
+- `ALLOWED_EMAIL_DOMAINS` to the exact domains approved by your client. The examples are `engug.ruh.ac.lk,ruh.ac.lk`; confirm before an actual deployment.
+- `DEMO_ADMIN_EMAIL` to a university-address demo administrator.
+- `DEMO_ADMIN_PASSWORD` to a **new strong password of at least 12 characters** if you want a demo admin account created by the seed command.
+
+**Important:** The server uses `server/.env` when you run it from `server/`. Never commit secrets or real user credentials.
+
+### University email verification
+
+In local development, the backend prints a **single-use verification URL** to the terminal after registration. Open that link to verify the account. This makes Sprint 1 testable without an SMTP account.
+
+For production, set `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, and `SMTP_FROM`; otherwise registration is disabled. Production email delivery, deployment hardening and external university identity-provider integration must be reviewed before real-world use.
+
+## 6. Create database tables and demo data
+
+```powershell
+cd server
+npx prisma generate
+npx prisma migrate dev --name sprint1
 npm run db:seed
+cd ..
 ```
 
-The seed command creates the item categories and campus locations. It creates or updates an administrator only when both `ADMIN_EMAIL` and `ADMIN_PASSWORD` are configured in `server/.env`.
+The seed step creates item categories and campus locations. It also creates/updates an email-verified ADMIN account **only if** `DEMO_ADMIN_EMAIL` and `DEMO_ADMIN_PASSWORD` are set. Do not use an example admin password on a real server.
 
-### 4. Run the application
+## 7. Run the application — two terminals
 
-Open two terminals at the repository root:
+**Terminal 1 (backend)**
 
-```sh
+```powershell
 npm run dev:server
 ```
 
-```sh
+Backend: http://localhost:4000/api/v1/health
+
+**Terminal 2 (frontend)**
+
+```powershell
 npm run dev:client
 ```
 
-The frontend runs at <http://localhost:5173> and proxies API requests to <http://localhost:4000>.
+Open **http://localhost:5173**.
 
-## Checks
+Vite proxies `/api` requests to Express, avoiding local cross-origin configuration problems.
 
-```sh
+## 8. Demonstrate Sprint 1
+
+1. Register using a permitted university-domain email.
+2. In the **backend terminal**, copy the local-development verification link, open it, then log in.
+3. Click **Report an item**. Create a LOST or FOUND report with category, location, date and description.
+4. For FOUND reports, provide a secret private identifying feature. Upload a photo if needed.
+5. The report shows **Pending review** in **My reports**.
+6. Log out and sign in using the demo admin email/password you configured.
+7. Open **Admin panel**, select the pending report and click **Approve** or enter a reason and **Reject**.
+8. Log in as the reporting user. Approved reports show **Approved**; rejected reports can be edited and resubmitted.
+
+The **repository search, claims, verification and handover** screens are intentionally not implemented in Sprint 1.
+
+## 9. Backend API reference
+
+All endpoints have the prefix `/api/v1`.
+
+| Method | Endpoint | Access | Purpose |
+|---|---|---|---|
+| GET | `/health` | Public | Health check |
+| POST | `/auth/register` | Public | Create account, send verification |
+| POST | `/auth/resend-verification` | Public | Request new verification email |
+| POST | `/auth/verify` | Public | Verify one-time email token |
+| POST | `/auth/login` | Public | Create HttpOnly session cookie |
+| GET | `/auth/me` | Logged in | Get account profile |
+| POST | `/auth/logout` | Logged in | Invalidate session version |
+| GET | `/reports/metadata` | Logged in | Locations and categories |
+| POST | `/reports` | Logged in | Create report |
+| GET | `/reports/mine` | Logged in | My reports |
+| GET | `/reports/:id` | Owner/ADMIN | Private report details |
+| PATCH | `/reports/:id` | Owner + rejected | Edit rejected report |
+| POST | `/reports/:id/resubmit` | Owner + rejected | Return to pending |
+| POST | `/reports/:id/images` | Owner | Multipart image upload (name: `image`) |
+| GET | `/reports/:id/images/:imageId` | Authorized | Protected photo access |
+| GET | `/admin/reports/pending` | ADMIN | Pending queue |
+| GET | `/admin/reports/:id` | ADMIN | Review report |
+| POST | `/admin/reports/:id/approve` | ADMIN | Approve pending report |
+| POST | `/admin/reports/:id/reject` | ADMIN | Reject pending report with `{ "reason": "..." }` |
+
+**Example request body** (`POST /api/v1/reports`):
+
+```json
+{
+  "reportType": "FOUND",
+  "title": "Black wireless mouse",
+  "publicDescription": "Found near the engineering library entrance yesterday evening.",
+  "categoryId": 1,
+  "locationId": 2,
+  "eventDate": "2026-11-03",
+  "secretAttributes": "Distinct marking on the underside",
+  "storageLocation": "With authorized faculty staff",
+  "finderContact": ""
+}
+```
+
+Category and location numeric IDs must correspond to `/reports/metadata` and may differ from this illustrative example.
+
+## 10. Run unit tests and build
+
+```powershell
 npm test
 npm run build
 ```
 
-`npm test` runs backend API tests using an isolated in-memory repository. `npm run build` generates the Prisma client and builds both the backend and frontend.
+Server tests exercise basic report status rules and image signature checks. For complete API integration you must run against a test database and use the manual acceptance checklist in `docs/TEST_PLAN.md`.
 
-## API overview
+## 11. GitHub workflow for four team members
 
-All API routes are under `/api/v1`.
+1. Create one shared GitHub repository and invite all teammates as collaborators.
+2. Protect `main`; optionally use `develop` for integration.
+3. Start each task on a branch, e.g. `feature/CLFR-38-architecture` or `feature/report-form`.
+4. Open a pull request; obtain at least one peer review before merge.
+5. Never commit `.env`, database files, uploads or `node_modules`.
+6. Keep Jira status and pull request links updated.
 
-| Method | Route | Access | Purpose |
-|---|---|---|---|
-| `GET` | `/health` | Public | API and database health |
-| `POST` | `/auth/register` | Public | Create an account |
-| `POST` | `/auth/login` | Public | Sign in |
-| `POST` | `/auth/logout` | Signed in | Sign out |
-| `GET` | `/auth/me` | Signed in | Current account |
-| `GET` | `/reports/search` | Public | Search approved reports |
-| `GET` | `/reports/metadata` | Public | Categories and locations |
-| `GET` | `/reports/mine` | Signed in | Current user's reports |
-| `POST` | `/reports` | Signed in | Submit a report |
-| `POST` | `/reports/:id/claims` | Signed in | Claim an approved found item |
-| `GET` | `/claims/mine` | Signed in | Current user's claims |
-| `/admin/*` | — | Administrator | Moderate reports and claims |
+```powershell
+git init
+git add .
+git commit -m "feat: implement Sprint 1 campus lost and found MVP"
+git branch -M main
+git remote add origin https://github.com/YOUR_ORGANIZATION/YOUR_REPO.git
+git push -u origin main
+```
 
-Authentication uses an HttpOnly session cookie. Public search omits private identifying details; claim and report moderation screens require sign-in and administrator permissions.
+For the complete branching steps, see `docs/TEAM_WORKFLOW.md`.
 
-## Production note
+## 12. Architecture
 
-The example environment values are not suitable for deployment. Supply unique secrets, use HTTPS (the production cookie is Secure), restrict network access to PostgreSQL, and configure an HTTPS reverse proxy and appropriate `CLIENT_URL` before exposing the service publicly.
+```text
+React + TypeScript web client (localhost:5173)
+             │  HTTPS/HTTP + REST JSON
+             ▼
+Express API (localhost:4000)
+  ├─ Authentication & roles
+  ├─ Report CRUD + private details
+  ├─ Secure photo storage
+  └─ Administrator moderation + audit
+             │  Prisma ORM
+             ▼
+  Single PostgreSQL database
+```
+
+The application uses only **USER** and **ADMIN** roles in Sprint 1, and one `Report` entity for both LOST and FOUND.
+
+## Known limitations / future hardening
+
+- A separate React Native application is **not** part of this Sprint 1 package; the responsive web UI is mobile friendly.
+- Email verification in development uses console links; do not enable that behavior in production.
+- Further email deliverability, automated integration tests, image moderation, rate limiting across all endpoints, production object storage, security reviews, deployment hardening and university SSO integration require additional engineering.
+- Images are private behind authorization. A manual admin should review images before approval; automatic photo redaction is not implemented.
+- A signed-in user's owner/admin report details may show private fields as intended. Other user search is not exposed in Sprint 1.
+
+See `docs/TEST_PLAN.md`, `docs/TEAM_WORKFLOW.md` and `docs/JIRA_SPRINT1.md`.
