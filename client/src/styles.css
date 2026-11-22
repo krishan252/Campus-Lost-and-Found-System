@@ -13,3 +13,14 @@
 @media(max-width:1100px){.uni-nav{gap:2px}.uni-nav a{padding:10px 7px}.uni-header-actions .uni-header-report{display:none}.uni-user{max-width:150px}.uni-stats{gap:10px}.uni-stat{padding:15px 10px}.uni-item-image{height:170px}}
 @media(max-width:760px){.uni-header .header-inner{min-height:66px}.uni-header .mobile-nav a{display:flex;align-items:center;gap:9px}.uni-hero{padding-top:42px}.uni-stats{grid-template-columns:repeat(2,minmax(0,1fr));margin-bottom:30px}.uni-search-top{flex-direction:column}.uni-filter-bottom{flex-direction:column;align-items:stretch}.uni-location{justify-content:space-between}.uni-section-head{align-items:flex-start;flex-direction:column}.uni-items-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.uni-process-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.uni-footer-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.uni-footer-bottom{gap:12px;flex-direction:column}}
 @media(max-width:480px){.uni-wrap{width:calc(100% - 28px)}.uni-hero h1{font-size:31px}.uni-kicker{font-size:9px}.uni-stats{gap:9px}.uni-stat strong{font-size:17px}.uni-stat small{font-size:8px}.uni-item-image{height:170px}.uni-items-grid{grid-template-columns:1fr}.uni-process-grid{grid-template-columns:1fr}.uni-footer-grid{grid-template-columns:1fr 1fr;gap:22px}.uni-search-card{padding:14px}.uni-location{flex-wrap:wrap}.uni-note{display:none}}
+
+/* Sprint 2 CLFR-63: private ownership claim form */
+.claim-form-grid{display:grid;grid-template-columns:minmax(0,1.7fr) minmax(240px,1fr);gap:22px;align-items:start}
+.claim-form-card{max-width:780px}
+.claim-form-item{padding-bottom:18px;margin-bottom:20px;border-bottom:1px solid #eee1df}
+.claim-form-item h2{font-size:clamp(1.35rem,2.1vw,1.9rem);margin:15px 0 5px}
+.claim-privacy-note{display:flex;align-items:center;gap:9px;background:#f6f0e9;border-radius:10px;padding:13px 15px;color:#6b5260;font-size:13px;margin:24px 0}
+.claim-help-panel{background:#f9f5f2}.claim-help-panel>svg{color:#856671}.claim-help-panel p{font-size:14px;color:#725f64}
+.claim-success-icon{display:inline-flex;padding:12px;background:#e1efe6;color:#43745a;border-radius:50%;margin-bottom:18px}
+.claim-form-card code{overflow-wrap:anywhere}
+@media(max-width:760px){.claim-form-grid{grid-template-columns:1fr}}

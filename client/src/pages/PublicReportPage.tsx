@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { ArrowLeft, CalendarDays, LockKeyhole, MapPin, Tag } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
 import { request } from '../api';
 import { Banner, PageHeading } from '../components/Layout';
 
@@ -17,6 +18,7 @@ type PublicReport = {
 };
 
 export function PublicReportPage() {
+  const { user } = useAuth();
   const { id } = useParams();
   const [report, setReport] = useState<PublicReport | null>(null);
   const [loading, setLoading] = useState(true);
@@ -55,7 +57,14 @@ export function PublicReportPage() {
         <aside className="panel private-panel">
           <div className="private-heading"><LockKeyhole size={21}/><h3>Protected ownership verification</h3></div>
           <p>Secret identifying details and personal contact information are never displayed in public reports.</p>
-          <p>Ownership claims and verified handover are planned for the next stage of development.</p>
+          {report.reportType === 'FOUND' ? <>
+            <p>If this is your item, submit private identifying information for authorized staff to review. Submitting a claim does not automatically verify ownership or release contact details.</p>
+            {user?.role === 'ADMIN'
+              ? <p>Administrator accounts cannot submit ownership claims.</p>
+              : <Link className="button button-block" to={user ? `/items/${report.id}/claim` : '/login'}>
+                  {user ? 'Claim this found item' : 'Sign in to claim this item'}
+                </Link>}
+          </> : <p>This is a lost-item report. Ownership claims are available for approved found items.</p>}
         </aside>
       </div>
     </>}
