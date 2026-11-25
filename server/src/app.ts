@@ -26,3 +26,5 @@ app.use('/api/v1/claims',claimsRouter);
 app.use('/api/v1/admin',adminRouter);
 app.use((_req,res)=>res.status(404).json({success:false,message:'Route not found.'}));
 app.use(errorHandler);
+
+export default app;
