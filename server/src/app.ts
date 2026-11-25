@@ -1,5 +1,6 @@
 import express from 'express';
 import helmet from 'helmet';
+import type { RequestHandler } from 'express';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
 import { rateLimit } from 'express-rate-limit';
@@ -13,7 +14,8 @@ import { checkOrigin,errorHandler } from './middleware/guards.js';
 
 export const app = express();
 app.disable('x-powered-by');
-app.use(helmet());
+const helmetFactory = helmet as unknown as () => RequestHandler;
+app.use(helmetFactory());
 app.use(cors({origin:env.CLIENT_URL,credentials:true}));
 app.use(express.json({limit:'1mb'}));
 app.use(cookieParser());
