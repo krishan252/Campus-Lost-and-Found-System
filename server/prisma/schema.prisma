@@ -24,6 +24,12 @@ enum ReportStatus {
   CLOSED
 }
 
+enum ClaimStatus {
+  PENDING
+  VERIFIED
+  REJECTED
+}
+
 model User {
   id                     String @id @default(uuid())
   fullName               String
@@ -35,6 +41,7 @@ model User {
   createdAt              DateTime @default(now())
   updatedAt              DateTime @updatedAt
   reports                Report[] @relation("Reporter")
+  claims                 Claim[] @relation("Claimant")
   moderationReviews      ModerationReview[] @relation("Reviewer")
   verificationTokens     EmailVerificationToken[]
   auditEvents            AuditEvent[]
@@ -81,6 +88,7 @@ model Report {
   location       CampusLocation @relation(fields: [locationId], references: [id])
   privateDetails PrivateReportDetails?
   images         ReportImage[]
+  claims         Claim[]
   reviews        ModerationReview[]
   @@index([status, createdAt])
   @@index([reporterId, createdAt])
@@ -127,4 +135,21 @@ model AuditEvent {
   metadata      Json?
   actor         User @relation(fields: [actorId], references: [id])
   @@index([entityType, entityId])
+}
+
+// Ownership claims for approved FOUND reports. Claim evidence stays private.
+// CLFR-64 will add race-safe uniqueness for active claims.
+model Claim {
+  id                String      @id @default(uuid())
+  reportId          String
+  claimantId        String
+  ownershipEvidence String      @db.Text
+  status            ClaimStatus @default(PENDING)
+  createdAt         DateTime    @default(now())
+  updatedAt         DateTime    @updatedAt
+  report            Report      @relation(fields: [reportId], references: [id], onDelete: Restrict)
+  claimant          User        @relation("Claimant", fields: [claimantId], references: [id], onDelete: Restrict)
+
+  @@index([reportId, status])
+  @@index([claimantId, createdAt])
 }

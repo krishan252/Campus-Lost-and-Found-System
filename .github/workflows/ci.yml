@@ -1,0 +1,91 @@
+name: UniTrace CI
+
+on:
+  push:
+    branches: [main, 'feature/**']
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test-build:
+    name: Test, migrate, and build
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: clfr_ci
+          POSTGRES_PASSWORD: ci_only_password
+          POSTGRES_DB: unitrace_ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U clfr_ci -d unitrace_ci"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      NODE_ENV: test
+      PORT: '4000'
+      DATABASE_URL: postgresql://clfr_ci:ci_only_password@127.0.0.1:5432/unitrace_ci?schema=public
+      JWT_SECRET: ci-only-secret-do-not-use-in-production-at-least-32-characters
+      CLIENT_URL: http://localhost:5173
+      ALLOWED_EMAIL_DOMAINS: engug.ruh.ac.lk,ruh.ac.lk
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - name: Node.js 22 and npm cache
+        uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: |
+            server/package-lock.json
+            client/package-lock.json
+
+      - name: Install backend dependencies
+        run: npm --prefix server ci
+
+      - name: Install frontend dependencies
+        run: npm --prefix client ci
+
+      - name: Generate Prisma client
+        working-directory: server
+        run: npx prisma generate
+
+      - name: Apply migrations to temporary CI database
+        working-directory: server
+        run: npx prisma migrate deploy
+
+      - name: Run automated tests
+        run: npm test
+
+      - name: Build backend and frontend
+        run: npm run build
+
+      - name: Smoke-test Express API
+        shell: bash
+        run: |
+          node server/dist/index.js > "$RUNNER_TEMP/unitrace-api.log" 2>&1 &
+          for attempt in $(seq 1 25); do
+            if curl --fail --silent --show-error http://127.0.0.1:4000/api/v1/health; then
+              echo "API health check passed"
+              exit 0
+            fi
+            sleep 2
+          done
+          cat "$RUNNER_TEMP/unitrace-api.log"
+          exit 1

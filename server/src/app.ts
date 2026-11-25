@@ -8,6 +8,7 @@ import { authRouter } from './routes/auth.js';
 import { reportsRouter } from './routes/reports.js';
 import { adminRouter } from './routes/admin.js';
 import { publicReportsRouter } from './routes/publicReports.js';
+import { claimsRouter } from './routes/claims.js';
 import { checkOrigin,errorHandler } from './middleware/guards.js';
 
 export const app = express();
@@ -21,6 +22,7 @@ app.get('/api/v1/health',(_req,res)=>res.json({success:true,data:{service:'clfr-
 app.use('/api/v1/public', publicReportsRouter);
 app.use('/api/v1/auth',rateLimit({windowMs:15*60*1000,limit:30,standardHeaders:'draft-7',legacyHeaders:false}),authRouter);
 app.use('/api/v1/reports',reportsRouter);
+app.use('/api/v1/claims',claimsRouter);
 app.use('/api/v1/admin',adminRouter);
 app.use((_req,res)=>res.status(404).json({success:false,message:'Route not found.'}));
 app.use(errorHandler);
